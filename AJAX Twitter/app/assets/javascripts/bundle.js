@@ -86,12 +86,43 @@
 /************************************************************************/
 /******/ ({
 
+/***/ "./frontend/api_util.js":
+/*!******************************!*\
+  !*** ./frontend/api_util.js ***!
+  \******************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+const APIUtil = {
+    followUser: id => {
+        return $.ajax({
+            method: 'POST',
+            url: `/users/${id}/follow`,
+            dataType: 'json',
+        });
+    },
+    unfollowUser: id => {
+        return $.ajax({
+            method: 'DELETE',
+            url: `/users/${id}/follow`,
+            dataType: 'json',
+        });
+    }
+};
+
+//APIUtil.followUser(user.id)
+module.exports = APIUtil;
+
+/***/ }),
+
 /***/ "./frontend/follow_toggle.js":
 /*!***********************************!*\
   !*** ./frontend/follow_toggle.js ***!
   \***********************************/
 /*! no static exports found */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
+
+const APIUtil = __webpack_require__(/*! ./api_util.js */ "./frontend/api_util.js");
 
 class FollowToggle {
     constructor (button, option) {
@@ -106,35 +137,33 @@ class FollowToggle {
 
     render() {
         if(this.followState === "unfollowed") {
+            this.$el.prop("disabled", false);
             this.$el.text("Follow!");
-        } else {
+        } else if (this.followState === "followed") {
+            this.$el.prop("disabled", false);
             this.$el.text("Unfollow!");
+        } else if (this.followState === "following" || "unfollowing"){
+            this.$el.prop("disabled", true);
         }
     }
 
     handleClick(e) {
         e.preventDefault();
         if (this.followState === "unfollowed") {
-            return $.ajax({
-                method: 'POST',
-                url: `/users/${this.userId}/follow`,
-                dataType: 'json',
-                success: cb => {
-                    this.followState = "followed";
-                    this.render();
-                    console.log('now following');
-                }
+            this.followState = "following";
+            this.render();
+
+            APIUtil.followUser(this.userId).then( () => {
+                this.followState = "followed";
+                this.render();
             });
         } else {
-            return $.ajax({
-                method: 'DELETE',
-                url: `/users/${this.userId}/follow`,
-                dataType: 'json',
-                success: cb => {
-                    this.followState = "unfollowed";
-                    this.render();
-                    console.log('no longer following');
-                }
+            this.followState = "unfollowing";
+            this.render();
+            
+            APIUtil.unfollowUser(this.userId).then( () => {
+                this.followState = "unfollowed";
+                this.render();
             });
         }
         
